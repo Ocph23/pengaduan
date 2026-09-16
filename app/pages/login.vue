@@ -33,6 +33,9 @@
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
 const form = ref({ username: '', password: '' });
 const error = ref('');
 const loading = ref(false);
@@ -49,7 +52,7 @@ const handleLogin = async () => {
     
     console.log('Login berhasil:', response);
     alert(`Selamat datang, ${response.user.username}! (Role: ${response.user.role})`);
-    
+    navigateTo('/admin');
     
   } catch (err) {
     error.value = err.data?.statusMessage || 'Terjadi kesalahan pada server';

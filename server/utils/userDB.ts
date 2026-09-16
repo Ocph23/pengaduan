@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs';
 import { getDb, query } from './db';
 import { RowDataPacket, ResultSetHeader } from 'mysql2'
 
@@ -43,9 +44,10 @@ export const isNameUserExists = async (
 
 // Tambah kategori baru
 export const createUser = async (user:User): Promise<User> => {
+   const hashedPassword = await bcrypt.hash(user.password, 10);
   const sql = `INSERT INTO user (nomor_induk, name, username, password, role, phone_number)
    VALUES (?,?,?,?,?,?)`
-  const result = await query<ResultSetHeader>(sql, [user.nomor_induk, user.name, user.password, user.role, user.phone_number])
+  const result = await query<ResultSetHeader>(sql, [user.nomor_induk, user.name, user.username, hashedPassword, user.role, user.phone_number])
   return (await getUserById(result.insertId))!
 }
 
@@ -54,9 +56,9 @@ export const updateUser = async (user:User): Promise<User | null> => {
   const sql = `UPDATE user SET 
     nomor_induk = ?, 
     name = ?, 
-    phone_number = ?, 
+    phone_number = ? 
     WHERE id = ?`
-  await query<ResultSetHeader>(sql, [user.nomor_induk, user.name, user.phone_number])
+  await query<ResultSetHeader>(sql, [user.nomor_induk, user.name, user.phone_number, user.id])
   return getUserById(user.id)
 }
 
