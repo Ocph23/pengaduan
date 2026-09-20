@@ -79,7 +79,7 @@
           <div class="modal-body">
             <div class="form-group">
               <label for="name">Nama Kategori <span class="required">*</span></label>
-              <input id="name" v-model="form.name" type="text" placeholder="Contoh: Pakaian Pria" required autofocus />
+              <input id="name" v-model="form.name" type="text" placeholder="Contoh: Bangunan" required autofocus />
             </div>
           </div>
 

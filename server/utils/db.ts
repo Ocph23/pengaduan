@@ -6,6 +6,7 @@ let pool: mysql.Pool;
 export const getDb = () => {
   if (!pool) {
     const config = useRuntimeConfig();
+    console.log('Connecting to database:', config.dbHost, config.dbUser, config.dbName);
     pool = mysql.createPool({
       host: config.dbHost,
       user: config.dbUser,

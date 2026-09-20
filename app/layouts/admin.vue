@@ -33,12 +33,15 @@
 
       <div class="sidebar-footer">
         <div class="user-info">
-          <div class="avatar">A</div>
+          <div class="avatar">{{ adminInitial }}</div>
           <div class="user-detail">
-            <div class="user-name">Admin</div>
-            <div class="user-role">Super Admin</div>
+            <div class="user-name">{{ currentUser?.name || 'Admin' }}</div>
+            <div class="user-role">{{ currentUser?.role || 'Admin' }}</div>
           </div>
         </div>
+        <button class="logout-sidebar" type="button" @click="logout">
+          Logout
+        </button>
       </div>
     </aside>
 
@@ -55,6 +58,7 @@
         <div class="header-actions">
           <button class="icon-btn" title="Notifikasi">🔔</button>
           <button class="icon-btn" title="Pengaturan">⚙️</button>
+          <button class="logout-btn" type="button" @click="logout">Logout</button>
         </div>
       </header>
 
@@ -69,9 +73,11 @@
 <script setup>
 const route = useRoute()
 const isSidebarOpen = ref(false)
+const currentUser = ref(null)
 
 const menuItems = [
   { path: '/admin', icon: '📊', label: 'Dashboard' },
+  { path: '/admin/reports', icon: '📝', label: 'Laporan' },
   { path: '/admin/users', icon: '👥', label: 'Data Pengguna' },
   { path: '/admin/categories', icon: '📦', label: 'Kategori' },
   { path: '/admin/locations', icon: '🛒', label: 'Lokasi' },
@@ -87,6 +93,29 @@ const isActive = (path) => {
 const currentPageTitle = computed(() => {
   const active = menuItems.find(item => isActive(item.path))
   return active?.label || 'Admin'
+})
+
+const adminInitial = computed(() => {
+  return currentUser.value?.name?.charAt(0)?.toUpperCase() || 'A'
+})
+
+const logout = async () => {
+  await $fetch('/api/logout', { method: 'POST' })
+  currentUser.value = null
+  navigateTo('/login')
+}
+
+onMounted(async () => {
+  const response = await $fetch('/api/me')
+  if (!response.authenticated || !response.user) {
+    return navigateTo('/login')
+  }
+
+  if (response.user.role !== 'admin') {
+    return navigateTo('/lapor')
+  }
+
+  currentUser.value = response.user
 })
 </script>
 
@@ -211,6 +240,23 @@ const currentPageTitle = computed(() => {
   font-size: 12px;
 }
 
+.logout-sidebar {
+  width: 100%;
+  margin-top: 14px;
+  background: rgba(248, 113, 113, 0.12);
+  color: #fecaca;
+  border: 1px solid rgba(248, 113, 113, 0.24);
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.logout-sidebar:hover {
+  background: rgba(248, 113, 113, 0.2);
+  color: #fff;
+}
+
 /* ===== MAIN WRAPPER ===== */
 .main-wrapper {
   flex: 1;
@@ -267,6 +313,23 @@ const currentPageTitle = computed(() => {
 
 .icon-btn:hover {
   background: #e2e8f0;
+}
+
+.logout-btn {
+  background: #fee2e2;
+  color: #991b1b;
+  border: none;
+  min-width: 78px;
+  height: 40px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 0 14px;
+}
+
+.logout-btn:hover {
+  background: #fecaca;
 }
 
 .content {

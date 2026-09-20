@@ -1,5 +1,6 @@
 import { getDb } from '.././utils/db';
 import bcrypt from 'bcryptjs';
+import { setSessionUser } from '../utils/auth';
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event);
@@ -27,10 +28,14 @@ export default defineEventHandler(async (event) => {
   
   const userx = {
     id: user.id,
+    name: user.name,
     username: user.username,
-    role: user.role
+    role: user.role,
+    nomor_induk: user.nomor_induk,
+    phone_number: user.phone_number
   }
   
+  setSessionUser(event, userx)
   
   return {
     message: 'Login berhasil',

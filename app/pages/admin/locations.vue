@@ -81,11 +81,12 @@
           <div class="modal-body">
             <div class="form-group">
               <label for="name">Nama lokasi <span class="required">*</span></label>
-              <input id="name" v-model="form.name" type="text" placeholder="Contoh: Pakaian Pria" required autofocus />
+              <input id="name" v-model="form.name" type="text" placeholder="Contoh: Lab" required autofocus />
             </div>
             <div class="form-group">
-              <label for="name">Deskrispsi <span class="required">*</span></label>
-              <input id="name" v-model="form.description" type="text" placeholder="Contoh: Pakaian Pria" required autofocus />
+              <label for="description">Deskripsi <span class="required">*</span></label>
+              <input id="description" v-model="form.description" type="text"
+                placeholder="Contoh: Ruangan untuk percobaan" required autofocus />
             </div>
           </div>
 
@@ -155,7 +156,7 @@ const categoryToDelete = ref(null)
 
 const form = reactive({
   name: '',
-  description:''
+  description: ''
 })
 
 const toast = reactive({
@@ -238,7 +239,7 @@ const saveLocation = async () => {
   isSubmitting.value = true
 
   try {
-    const data = { name: form.name.trim(), description:form.description }
+    const data = { name: form.name.trim(), description: form.description }
 
     if (isEdit.value) {
       const res = await $fetch(`/api/locations/${editingId.value}`, {

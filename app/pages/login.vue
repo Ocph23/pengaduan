@@ -51,8 +51,11 @@ const handleLogin = async () => {
     });
     
     console.log('Login berhasil:', response);
-    alert(`Selamat datang, ${response.user.username}! (Role: ${response.user.role})`);
-    navigateTo('/admin');
+    if (response.user.role === 'admin') {
+      navigateTo('/admin');
+    } else {
+      navigateTo('/lapor');
+    }
     
   } catch (err) {
     error.value = err.data?.statusMessage || 'Terjadi kesalahan pada server';

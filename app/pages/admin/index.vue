@@ -1,67 +1,68 @@
 <template>
   <div>
-    <!-- Statistik Cards -->
+    <div class="page-header">
+      <div>
+        <h2>Dashboard Pengaduan</h2>
+        <p>Pantau ringkasan laporan siswa dan guru.</p>
+      </div>
+      <NuxtLink class="btn-primary" to="/admin/reports">Kelola Laporan</NuxtLink>
+    </div>
+
     <div class="stats-grid">
       <div v-for="stat in stats" :key="stat.label" class="stat-card">
-        <div class="stat-icon" :style="{ background: stat.color }">
-          {{ stat.icon }}
-        </div>
+        <div class="stat-icon" :class="stat.className">{{ stat.icon }}</div>
         <div class="stat-info">
           <div class="stat-label">{{ stat.label }}</div>
           <div class="stat-value">{{ stat.value }}</div>
-          <div class="stat-change" :class="stat.trend > 0 ? 'up' : 'down'">
-            {{ stat.trend > 0 ? '↑' : '↓' }} {{ Math.abs(stat.trend) }}% dari bulan lalu
-          </div>
+          <div class="stat-note">{{ stat.note }}</div>
         </div>
       </div>
     </div>
 
-    <!-- Konten Utama -->
     <div class="content-grid">
-      <div class="card">
+      <section class="card">
         <div class="card-header">
-          <h2>Aktivitas Terbaru</h2>
-          <button class="btn-link">Lihat Semua</button>
+          <h2>Status Laporan</h2>
+          <button class="btn-link" type="button" @click="fetchReports">Muat Ulang</button>
         </div>
-        <div class="activity-list">
-          <div v-for="(act, i) in activities" :key="i" class="activity-item">
-            <div class="activity-icon">{{ act.icon }}</div>
-            <div class="activity-content">
-              <div class="activity-text">{{ act.text }}</div>
-              <div class="activity-time">{{ act.time }}</div>
+
+        <div v-if="isLoading" class="empty-state">Memuat ringkasan...</div>
+        <div v-else class="status-list">
+          <div v-for="item in statusSummary" :key="item.status" class="status-row">
+            <div class="status-text">
+              <span class="status-dot" :class="item.status"></span>
+              <span>{{ item.label }}</span>
             </div>
+            <strong>{{ item.count }}</strong>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div class="card">
+      <section class="card">
         <div class="card-header">
-          <h2>Pesanan Terbaru</h2>
-          <button class="btn-link">Lihat Semua</button>
+          <h2>Laporan Terbaru</h2>
+          <NuxtLink class="btn-link" to="/admin/reports">Lihat Semua</NuxtLink>
         </div>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Pelanggan</th>
-              <th>Total</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="order in orders" :key="order.id">
-              <td>#{{ order.id }}</td>
-              <td>{{ order.customer }}</td>
-              <td>{{ order.total }}</td>
-              <td>
-                <span class="badge" :class="order.status">
-                  {{ order.statusLabel }}
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+
+        <div v-if="isLoading" class="empty-state">Memuat laporan...</div>
+        <div v-else-if="latestReports.length === 0" class="empty-state">Belum ada laporan.</div>
+        <div v-else class="report-list">
+          <article v-for="report in latestReports" :key="report.id" class="report-item">
+            <div class="report-main">
+              <div>
+                <h3>{{ report.title }}</h3>
+                <p>{{ report.reporter_name }} · {{ report.reporter_type }}</p>
+              </div>
+              <span class="badge" :class="report.status">{{ statusLabel(report.status) }}</span>
+            </div>
+            <div class="report-meta">
+              <span>{{ report.category_name || 'Tanpa kategori' }}</span>
+              <span>{{ report.location_name || 'Tanpa lokasi' }}</span>
+              <span>{{ formatDate(report.created_at) }}</span>
+            </div>
+          </article>
+        </div>
+      </section>
     </div>
   </div>
 </template>
@@ -72,183 +73,346 @@ definePageMeta({
 })
 
 useHead({
-  title: 'Dashboard Admin'
+  title: 'Dashboard Pengaduan - Admin'
 })
 
-const stats = [
-  { label: 'Total User', value: '1.248', icon: '👥', color: '#dbeafe', trend: 12 },
-  { label: 'Pendapatan', value: 'Rp 45,2 jt', icon: '💰', color: '#dcfce7', trend: 8 },
-  { label: 'Pesanan', value: '324', icon: '🛒', color: '#fef3c7', trend: -3 },
-  { label: 'Produk', value: '89', icon: '📦', color: '#fce7f3', trend: 5 }
-]
+const reports = ref([])
+const isLoading = ref(false)
 
-const activities = [
-  { icon: '👤', text: 'User baru "Budi Santoso" mendaftar', time: '5 menit lalu' },
-  { icon: '🛒', text: 'Pesanan #1024 telah dibayar', time: '15 menit lalu' },
-  { icon: '📦', text: 'Produk "Kemeja Biru" stok habis', time: '1 jam lalu' },
-  { icon: '💬', text: 'Review baru dari "Siti Aminah"', time: '2 jam lalu' }
-]
+const normalizeList = (response) => {
+  if (response && Array.isArray(response.data)) return response.data
+  if (Array.isArray(response)) return response
+  return []
+}
 
-const orders = [
-  { id: 1024, customer: 'Budi Santoso', total: 'Rp 250.000', status: 'success', statusLabel: 'Selesai' },
-  { id: 1023, customer: 'Siti Aminah', total: 'Rp 180.000', status: 'pending', statusLabel: 'Pending' },
-  { id: 1022, customer: 'Andi Wijaya', total: 'Rp 420.000', status: 'success', statusLabel: 'Selesai' },
-  { id: 1021, customer: 'Dewi Lestari', total: 'Rp 95.000', status: 'warning', statusLabel: 'Dikirim' }
-]
+const statusLabel = (status) => ({
+  baru: 'Baru',
+  diproses: 'Diproses',
+  selesai: 'Selesai',
+  ditolak: 'Ditolak'
+}[status] || status)
+
+const formatDate = (value) => new Intl.DateTimeFormat('id-ID', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit'
+}).format(new Date(value))
+
+const countByStatus = (status) => reports.value.filter(report => report.status === status).length
+
+const statusSummary = computed(() => [
+  { status: 'baru', label: 'Baru', count: countByStatus('baru') },
+  { status: 'diproses', label: 'Diproses', count: countByStatus('diproses') },
+  { status: 'selesai', label: 'Selesai', count: countByStatus('selesai') },
+  { status: 'ditolak', label: 'Ditolak', count: countByStatus('ditolak') }
+])
+
+const latestReports = computed(() => reports.value.slice(0, 5))
+
+const stats = computed(() => [
+  {
+    label: 'Total Laporan',
+    value: reports.value.length,
+    note: 'Semua laporan masuk',
+    icon: 'L',
+    className: 'blue'
+  },
+  {
+    label: 'Laporan Baru',
+    value: countByStatus('baru'),
+    note: 'Menunggu tindak lanjut',
+    icon: 'B',
+    className: 'amber'
+  },
+  {
+    label: 'Diproses',
+    value: countByStatus('diproses'),
+    note: 'Sedang ditangani',
+    icon: 'P',
+    className: 'indigo'
+  },
+  {
+    label: 'Selesai',
+    value: countByStatus('selesai'),
+    note: 'Sudah dituntaskan',
+    icon: 'S',
+    className: 'green'
+  }
+])
+
+const fetchReports = async () => {
+  isLoading.value = true
+  try {
+    const response = await $fetch('/api/reports')
+    reports.value = normalizeList(response)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+onMounted(fetchReports)
 </script>
 
 <style scoped>
+.page-header {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.page-header h2 {
+  color: #1e293b;
+  font-size: 22px;
+  margin: 0 0 4px;
+}
+
+.page-header p {
+  color: #64748b;
+  font-size: 14px;
+  margin: 0;
+}
+
+.btn-primary {
+  background: #2563eb;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px 14px;
+  text-decoration: none;
+}
+
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
-  margin-bottom: 24px;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  margin-bottom: 22px;
 }
 
 .stat-card {
-  background: #fff;
-  padding: 20px;
-  border-radius: 12px;
-  display: flex;
   align-items: center;
-  gap: 16px;
+  background: #fff;
+  border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  display: flex;
+  gap: 14px;
+  padding: 18px;
 }
 
 .stat-icon {
-  width: 50px;
-  height: 50px;
-  border-radius: 10px;
-  display: flex;
   align-items: center;
+  border-radius: 8px;
+  display: flex;
+  font-weight: 800;
+  height: 46px;
   justify-content: center;
-  font-size: 24px;
+  width: 46px;
+}
+
+.stat-icon.blue {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.stat-icon.amber {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.stat-icon.indigo {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.stat-icon.green {
+  background: #dcfce7;
+  color: #166534;
 }
 
 .stat-label {
   color: #64748b;
   font-size: 13px;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .stat-value {
   color: #1e293b;
-  font-size: 22px;
-  font-weight: 700;
-  margin-bottom: 4px;
+  font-size: 24px;
+  font-weight: 800;
 }
 
-.stat-change {
+.stat-note {
+  color: #94a3b8;
   font-size: 12px;
-  font-weight: 600;
+  margin-top: 2px;
 }
-
-.stat-change.up { color: #16a34a; }
-.stat-change.down { color: #dc2626; }
 
 .content-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: 20px;
+  grid-template-columns: 0.85fr 1.15fr;
 }
 
 .card {
   background: #fff;
-  border-radius: 12px;
-  padding: 20px;
+  border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  padding: 20px;
 }
 
 .card-header {
+  align-items: center;
   display: flex;
   justify-content: space-between;
-  align-items: center;
   margin-bottom: 16px;
 }
 
 .card-header h2 {
-  font-size: 16px;
   color: #1e293b;
+  font-size: 17px;
   margin: 0;
 }
 
 .btn-link {
   background: none;
-  border: none;
-  color: #6366f1;
+  border: 0;
+  color: #2563eb;
   cursor: pointer;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
+  text-decoration: none;
 }
 
-.activity-list {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+.empty-state {
+  background: #f8fafc;
+  border-radius: 8px;
+  color: #64748b;
+  font-weight: 700;
+  padding: 28px 12px;
+  text-align: center;
 }
 
-.activity-item {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
+.status-list {
+  display: grid;
+  gap: 10px;
 }
 
-.activity-icon {
-  width: 36px;
-  height: 36px;
-  background: #f1f5f9;
+.status-row {
+  align-items: center;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
   display: flex;
+  justify-content: space-between;
+  padding: 12px;
+}
+
+.status-text {
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  color: #334155;
+  display: flex;
+  font-weight: 700;
+  gap: 10px;
 }
 
-.activity-text {
+.status-dot {
+  border-radius: 999px;
+  height: 10px;
+  width: 10px;
+}
+
+.status-dot.baru {
+  background: #1d4ed8;
+}
+
+.status-dot.diproses {
+  background: #d97706;
+}
+
+.status-dot.selesai {
+  background: #16a34a;
+}
+
+.status-dot.ditolak {
+  background: #dc2626;
+}
+
+.report-list {
+  display: grid;
+  gap: 12px;
+}
+
+.report-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.report-main {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.report-main h3 {
   color: #1e293b;
-  font-size: 14px;
-  margin-bottom: 2px;
+  font-size: 15px;
+  margin: 0 0 4px;
 }
 
-.activity-time {
-  color: #94a3b8;
-  font-size: 12px;
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-.data-table th {
-  text-align: left;
-  padding: 10px 8px;
+.report-main p {
   color: #64748b;
-  font-weight: 600;
-  font-size: 12px;
-  text-transform: uppercase;
-  border-bottom: 1px solid #e2e8f0;
+  font-size: 13px;
+  margin: 0;
+  text-transform: capitalize;
 }
 
-.data-table td {
-  padding: 12px 8px;
-  color: #1e293b;
-  border-bottom: 1px solid #f1f5f9;
+.report-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
 }
 
+.report-meta span,
 .badge {
-  padding: 4px 10px;
-  border-radius: 20px;
+  border-radius: 999px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 800;
+  padding: 5px 9px;
 }
 
-.badge.success { background: #dcfce7; color: #16a34a; }
-.badge.pending { background: #fef3c7; color: #d97706; }
-.badge.warning { background: #dbeafe; color: #2563eb; }
+.report-meta span {
+  background: #f1f5f9;
+  color: #475569;
+}
 
-@media (max-width: 768px) {
+.badge.baru {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.badge.diproses {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge.selesai {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badge.ditolak {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+@media (max-width: 900px) {
   .content-grid {
     grid-template-columns: 1fr;
   }

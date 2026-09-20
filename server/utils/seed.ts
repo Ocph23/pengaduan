@@ -33,6 +33,39 @@ export const seedDatabase = async () => {
       )
     `);
 
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS reports (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NULL,
+        reporter_type ENUM('siswa', 'guru') NOT NULL,
+        reporter_name VARCHAR(255) NOT NULL,
+        reporter_identifier VARCHAR(100) NULL,
+        phone_number VARCHAR(50) NULL,
+        category_id INT NULL,
+        location_id INT NULL,
+        title VARCHAR(255) NOT NULL,
+        description TEXT NOT NULL,
+        status VARCHAR(50) NOT NULL DEFAULT 'baru',
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE SET NULL,
+        FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
+        FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL
+      )
+    `);
+
+    const [reportColumns]: any = await db.execute(`
+      SELECT COLUMN_NAME
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'reports'
+        AND COLUMN_NAME = 'user_id'
+    `);
+
+    if (reportColumns.length === 0) {
+      await db.execute(`ALTER TABLE reports ADD COLUMN user_id INT NULL AFTER id`);
+      await db.execute(`ALTER TABLE reports ADD CONSTRAINT reports_user_id_fk FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE SET NULL`);
+    }
+
 
     // 2. Cek apakah admin sudah ada
     const [rows]: any = await db.execute('SELECT id FROM user WHERE username = ?', ['admin']);
